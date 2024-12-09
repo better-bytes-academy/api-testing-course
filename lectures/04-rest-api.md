@@ -1,8 +1,9 @@
 # Outline
+- Chữa bài quiz.
 - Rest là gì? Lịch sử ra đời? Tại sao ra đời?
 - Tại sao dùng Rest API?
-- Các thành phần của Rest API
-- Thực hiện gọi REST API đơn giản với Postman
+- Các thành phần của Rest API.
+- Thực hiện gọi REST API đơn giản với Postman.
 
 # Rest API là gì?
 - REST = REpresentational State Transfer nghĩa là một công nghệ được sử dụng để xử lý các yêu cầu và trả về dữ liệu.
