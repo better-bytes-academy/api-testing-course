@@ -130,3 +130,48 @@ Content-Length: 123456
 ```
 
 > Headers đóng vai trò quan trọng trong việc điều khiển hành vi của HTTP requests/responses và đảm bảo tính bảo mật, hiệu suất của ứng dụng web.
+
+# Tại sao lại phải tách headers và body? Sao không đưa hẳn authentication/ additional data vào trong body?
+
+## 1. Hiệu năng xử lý:
+- Headers được gửi trước body và có kích thước nhỏ, cho phép server đọc nhanh các thông tin quan trọng mà không cần đợi toàn bộ body được tải lên
+- Server có thể quyết định sớm về cách xử lý request dựa vào headers (ví dụ từ chối request không có auth, trả về cache)
+- Tiết kiệm tài nguyên vì không phải parse toàn bộ body để lấy thông tin meta
+
+## 2. Tính tiêu chuẩn hóa:
+- Headers có format chuẩn key-value, dễ parse và xử lý
+- Các header fields được định nghĩa rõ ràng trong spec HTTP
+- Các middleware, proxy server có thể dễ dàng đọc và xử lý headers
+
+## 3. Phân tách concerns:
+- Headers chứa metadata và thông tin điều khiển
+- Body chứa nội dung thực của request/response
+- Giúp code xử lý rõ ràng và dễ maintain hơn
+
+## 4. Một số thông tin bắt buộc phải ở header:
+- Content-Length: Server cần biết trước để đọc body
+- Authorization: Cần xác thực trước khi xử lý body
+- Content-Type: Cần biết định dạng để parse body
+
+Ví dụ thực tế:
+```http
+POST /api/users HTTP/1.1
+Host: example.com
+Authorization: Bearer abc123
+Content-Type: application/json
+Content-Length: 42
+
+{"name": "Alex", "email": "alex@example.com"}
+```
+
+Server có thể:
+1. Đọc Authorization header để validate token
+2. Kiểm tra Content-Type để chuẩn bị JSON parser
+3. Đọc Content-Length để biết cần đọc bao nhiêu bytes
+4. Mới bắt đầu đọc và parse body
+
+Nếu bỏ hết vào body, server sẽ phải:
+1. Đọc toàn bộ body
+2. Parse để tìm thông tin auth, content type...
+3. Validate và xử lý
+-> Tốn tài nguyên và chậm hơn nhiều
