@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Thư Viện</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Thư Viện</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="homeLink">Trang Chủ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="booksLink">Sách</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="categoriesLink">Danh Mục</a>
+                    </li>
+                </ul>
+                <div class="d-flex" id="authButtons">
+                    <button class="btn btn-outline-light me-2" id="loginBtn">Đăng Nhập</button>
+                    <button class="btn btn-light" id="registerBtn">Đăng Ký</button>
+                </div>
+                <div class="d-none" id="userInfo">
+                    <span class="text-light me-2" id="userName"></span>
+                    <button class="btn btn-outline-light" id="logoutBtn">Đăng Xuất</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Categories Section -->
+        <div id="categoriesSection" class="d-none">
+            <h2 class="mb-4">Danh Mục Sách</h2>
+            <div class="row" id="categoriesList">
+                <!-- Categories will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Books Section -->
+        <div id="booksSection" class="d-none">
+            <h2 class="mb-4">Danh Sách Sách</h2>
+            <div class="row" id="booksList">
+                <!-- Books will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đăng Nhập</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Đăng Nhập</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đăng Ký</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Họ và tên</label>
+                            <input type="text" class="form-control" id="registerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Đăng Ký</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API Base URL
+        const API_URL = 'http://localhost:3000/api';
+        let currentUser = null;
+        let authToken = localStorage.getItem('token');
+
+        // DOM Elements
+        const categoriesSection = document.getElementById('categoriesSection');
+        const booksSection = document.getElementById('booksSection');
+        const categoriesList = document.getElementById('categoriesList');
+        const booksList = document.getElementById('booksList');
+        const authButtons = document.getElementById('authButtons');
+        const userInfo = document.getElementById('userInfo');
+        const userName = document.getElementById('userName');
+
+        // Modal Elements
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        const registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
+
+        // Navigation
+        document.getElementById('categoriesLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            showCategories();
+        });
+
+        document.getElementById('booksLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            showBooks();
+        });
+
+        // Categories Functions
+        async function showCategories() {
+            categoriesSection.classList.remove('d-none');
+            booksSection.classList.add('d-none');
+            await loadCategories();
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_URL}/categories`, {
+                    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+                });
+                const categories = await response.json();
+                displayCategories(categories);
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        function displayCategories(categories) {
+            categoriesList.innerHTML = '';
+            categories.forEach(category => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 mb-3';
+                col.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${category.name}</h5>
+                            <p class="card-text">${category.description}</p>
+                            <button class="btn btn-primary" onclick="showCategoryBooks(${category.id})">
+                                Xem Sách
+                            </button>
+                        </div>
+                    </div>
+                `;
+                categoriesList.appendChild(col);
+            });
+        }
+
+        async function showCategoryBooks(categoryId) {
+            try {
+                const response = await fetch(`${API_URL}/books/category/${categoryId}`, {
+                    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+                });
+                const books = await response.json();
+                booksSection.classList.remove('d-none');
+                displayBooks(books);
+            } catch (error) {
+                console.error('Error loading category books:', error);
+            }
+        }
+
+        function displayBooks(books) {
+            booksList.innerHTML = '';
+            books.forEach(book => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 mb-3';
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${book.title}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${book.author}</h6>
+                            <p class="card-text">${book.description || 'Không có mô tả'}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge ${getStatusBadgeClass(book.status)}">
+                                    ${getStatusText(book.status)}
+                                </span>
+                                ${book.status === 'AVAILABLE' ? 
+                                    `<button class="btn btn-primary btn-sm" onclick="borrowBook(${book.id})">
+                                        Mượn Sách
+                                    </button>` : 
+                                    book.status === 'BORROWED' ?
+                                    `<button class="btn btn-success btn-sm" onclick="returnBook(${book.id})">
+                                        Trả Sách
+                                    </button>` : ''
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+                booksList.appendChild(col);
+            });
+        }
+
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'AVAILABLE':
+                    return 'bg-success';
+                case 'BORROWED':
+                    return 'bg-warning';
+                case 'DESTROYED':
+                    return 'bg-danger';
+                default:
+                    return 'bg-secondary';
+            }
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 'AVAILABLE':
+                    return 'Có Sẵn';
+                case 'BORROWED':
+                    return 'Đã Mượn';
+                case 'DESTROYED':
+                    return 'Đã Hủy';
+                default:
+                    return 'Không Xác Định';
+            }
+        }
+
+        async function borrowBook(bookId) {
+            if (!authToken) {
+                loginModal.show();
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/books/${bookId}/borrow`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    // Refresh the current category's books
+                    const currentCategoryId = getCurrentCategoryId();
+                    if (currentCategoryId) {
+                        await showCategoryBooks(currentCategoryId);
+                    }
+                }
+            } catch (error) {
+                console.error('Error borrowing book:', error);
+            }
+        }
+
+        async function returnBook(bookId) {
+            try {
+                const response = await fetch(`${API_URL}/books/${bookId}/return`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    // Refresh the current category's books
+                    const currentCategoryId = getCurrentCategoryId();
+                    if (currentCategoryId) {
+                        await showCategoryBooks(currentCategoryId);
+                    }
+                }
+            } catch (error) {
+                console.error('Error returning book:', error);
+            }
+        }
+
+        function getCurrentCategoryId() {
+            // Get the current category ID from the URL or state management
+            // For now, we'll just return null and implement this later if needed
+            return null;
+        }
+
+        // Auth Functions
+        document.getElementById('loginBtn').addEventListener('click', () => loginModal.show());
+        document.getElementById('registerBtn').addEventListener('click', () => registerModal.show());
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            await login(email, password);
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            await register(name, email, password);
+        });
+
+        async function login(email, password) {
+            try {
+                const response = await fetch(`${API_URL}/auth/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.access_token;
+                    localStorage.setItem('token', authToken);
+                    currentUser = data.user;
+                    updateAuthUI();
+                    loginModal.hide();
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+            }
+        }
+
+        async function register(name, email, password) {
+            try {
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                if (response.ok) {
+                    registerModal.hide();
+                    loginModal.show();
+                }
+            } catch (error) {
+                console.error('Register error:', error);
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('token');
+            updateAuthUI();
+        }
+
+        function updateAuthUI() {
+            if (authToken) {
+                authButtons.classList.add('d-none');
+                userInfo.classList.remove('d-none');
+                userName.textContent = currentUser?.name || 'User';
+            } else {
+                authButtons.classList.remove('d-none');
+                userInfo.classList.add('d-none');
+            }
+        }
+
+        // Initial load
+        if (authToken) {
+            updateAuthUI();
+        }
+        showCategories();
+    </script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .book-card {
+            height: 100%;
+            transition: transform 0.2s;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-available {
+            color: green;
+        }
+        .status-borrowed {
+            color: orange;
+        }
+        .status-destroyed {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Library Management System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="allBooksLink">All Books</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="categoriesLink">Categories</a>
+                    </li>
+                </ul>
+                <div class="d-flex" id="authButtons">
+                    <button class="btn btn-light me-2" id="loginBtn">Login</button>
+                    <button class="btn btn-outline-light" id="registerBtn">Register</button>
+                </div>
+                <div class="d-flex d-none" id="userInfo">
+                    <span class="text-light me-2">Welcome, <span id="username"></span></span>
+                    <button class="btn btn-outline-light" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Categories Section -->
+        <div class="row mb-4" id="categoriesSection">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Categories</h2>
+                    <div id="adminCategoryControls" class="d-none">
+                        <button class="btn btn-primary" id="addCategoryBtn">Add Category</button>
+                    </div>
+                </div>
+                <div class="list-group" id="categoriesList"></div>
+            </div>
+        </div>
+
+        <!-- Books Section -->
+        <div class="row">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 id="booksTitle">All Books</h2>
+                    <div id="adminBookControls" class="d-none">
+                        <button class="btn btn-primary" id="addBookBtn">Add Book</button>
+                    </div>
+                </div>
+                <div class="row" id="booksList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = '/api';
+        let currentUser = null;
+        let currentCategory = null;
+
+        // DOM Elements
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        const registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
+
+        // Event Listeners
+        document.getElementById('loginBtn').addEventListener('click', () => loginModal.show());
+        document.getElementById('registerBtn').addEventListener('click', () => registerModal.show());
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        document.getElementById('registerForm').addEventListener('submit', handleRegister);
+        document.getElementById('allBooksLink').addEventListener('click', () => loadBooks());
+        document.getElementById('categoriesLink').addEventListener('click', () => loadCategories());
+        document.getElementById('addBookBtn')?.addEventListener('click', showAddBookModal);
+        document.getElementById('addCategoryBtn')?.addEventListener('click', showAddCategoryModal);
+
+        // Auth Functions
+        async function handleLogin(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await fetch(`${API_URL}/auth/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.fromEntries(formData)),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('token', data.accessToken);
+                    currentUser = data.user;
+                    updateAuthUI();
+                    loginModal.hide();
+                    loadBooks();
+                    loadCategories();
+                }
+            } catch (error) {
+                console.error('Login failed:', error);
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.fromEntries(formData)),
+                });
+                if (response.ok) {
+                    registerModal.hide();
+                    loginModal.show();
+                }
+            } catch (error) {
+                console.error('Registration failed:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            currentUser = null;
+            updateAuthUI();
+            loadBooks();
+            loadCategories();
+        }
+
+        function updateAuthUI() {
+            const authButtons = document.getElementById('authButtons');
+            const userInfo = document.getElementById('userInfo');
+            const adminControls = document.getElementById('adminBookControls');
+            const adminCategoryControls = document.getElementById('adminCategoryControls');
+
+            if (currentUser) {
+                authButtons.classList.add('d-none');
+                userInfo.classList.remove('d-none');
+                document.getElementById('username').textContent = currentUser.username;
+                
+                if (['ADMIN', 'LIBRARIAN'].includes(currentUser.role)) {
+                    adminControls?.classList.remove('d-none');
+                    adminCategoryControls?.classList.remove('d-none');
+                }
+            } else {
+                authButtons.classList.remove('d-none');
+                userInfo.classList.add('d-none');
+                adminControls?.classList.add('d-none');
+                adminCategoryControls?.classList.add('d-none');
+            }
+        }
+
+        // Categories Functions
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_URL}/categories`);
+                const categories = await response.json();
+                displayCategories(categories);
+            } catch (error) {
+                console.error('Failed to load categories:', error);
+            }
+        }
+
+        function displayCategories(categories) {
+            const categoriesList = document.getElementById('categoriesList');
+            categoriesList.innerHTML = categories.map(category => `
+                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
+                   onclick="loadBooksByCategory(${category.id}, '${category.name}')">
+                    ${category.name}
+                    <span class="badge bg-primary rounded-pill">${category.books?.length || 0} books</span>
+                </a>
+            `).join('');
+        }
+
+        // Books Functions
+        async function loadBooks() {
+            currentCategory = null;
+            document.getElementById('booksTitle').textContent = 'All Books';
+            try {
+                const response = await fetch(`${API_URL}/books`);
+                const books = await response.json();
+                displayBooks(books);
+            } catch (error) {
+                console.error('Failed to load books:', error);
+            }
+        }
+
+        async function loadBooksByCategory(categoryId, categoryName) {
+            currentCategory = categoryId;
+            document.getElementById('booksTitle').textContent = `Books in ${categoryName}`;
+            try {
+                const response = await fetch(`${API_URL}/books/category/${categoryId}`);
+                const books = await response.json();
+                displayBooks(books);
+            } catch (error) {
+                console.error('Failed to load books by category:', error);
+            }
+        }
+
+        function displayBooks(books) {
+            const booksList = document.getElementById('booksList');
+            booksList.innerHTML = books.map(book => `
+                <div class="col-md-4 mb-4">
+                    <div class="card book-card">
+                        <div class="card-body">
+                            <h5 class="card-title">${book.title}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${book.author}</h6>
+                            <p class="card-text">${book.description || 'No description available'}</p>
+                            <p class="card-text">
+                                <small class="text-muted">Category: ${book.category.name}</small>
+                            </p>
+                            <p class="card-text">
+                                <small class="status-${book.status.toLowerCase()}">Status: ${book.status}</small>
+                            </p>
+                            ${currentUser ? `
+                                <button class="btn btn-primary btn-sm" 
+                                        onclick="borrowBook(${book.id})"
+                                        ${book.status !== 'AVAILABLE' ? 'disabled' : ''}>
+                                    Borrow
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function borrowBook(bookId) {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`${API_URL}/books/${bookId}/borrow`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    if (currentCategory) {
+                        loadBooksByCategory(currentCategory);
+                    } else {
+                        loadBooks();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to borrow book:', error);
+            }
+        }
+
+        // Initial load
+        loadBooks();
+        loadCategories();
+        
+        // Check for existing token
+        const token = localStorage.getItem('token');
+        if (token) {
+            // Verify token and get user info
+            fetch(`${API_URL}/auth/profile`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(response => response.json())
+            .then(user => {
+                currentUser = user;
+                updateAuthUI();
+            })
+            .catch(() => {
+                localStorage.removeItem('token');
+            });
+        }
+    </script>
+</body>
+</html>
