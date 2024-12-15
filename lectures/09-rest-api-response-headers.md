@@ -14,6 +14,91 @@ Response headers đóng vai trò quan trọng trong giao tiếp client-server:
 - Hỗ trợ cross-origin resource sharing (CORS)
 
 ## Các response header phổ biến
+| Nhóm | Header Name | Mục đích | Ví dụ | Use Cases |
+|------|-------------|-----------|--------|-----------|
+| 📝 Content | Content-Type | Định nghĩa kiểu dữ liệu | `application/json; charset=utf-8` | - API responses<br>- File downloads<br>- Web pages |
+| 📏 Content | Content-Length | Độ dài content (bytes) | `1234` | - Download progress<br>- Memory allocation |
+| 🗜️ Content | Content-Encoding | Phương thức nén | `gzip, br` | - Giảm bandwidth<br>- Tối ưu tốc độ |
+| 🌐 Content | Content-Language | Ngôn ngữ nội dung | `en-US, vi-VN` | - Đa ngôn ngữ<br>- SEO<br>- UX |
+| 💾 Cache | Cache-Control | Cách xử lý cache | `public, max-age=3600, immutable` | - Static files<br>- API cache<br>- Performance |
+| 🏷️ Cache | ETag | Version của resource | `"33a64df551..."` | - Cache validation<br>- Concurrency control |
+| 🕒 Cache | Last-Modified | Thời điểm sửa cuối | `Wed, 21 Oct 2023 07:28:00 GMT` | - Cache validation<br>- Resource tracking |
+| ⌛ Cache | Expires | Thời điểm hết hạn | `Wed, 21 Oct 2023 08:28:00 GMT` | - Legacy caching<br>- Fixed expiration |
+| 🔒 Security | Strict-Transport-Security | Bắt buộc HTTPS | `max-age=31536000; includeSubDomains; preload` | - Secure connection<br>- Prevent downgrades |
+| 🖼️ Security | X-Frame-Options | Kiểm soát iframe | `DENY`, `SAMEORIGIN` | - Prevent clickjacking<br>- Frame control |
+| 🛡️ Security | Content-Security-Policy | Chính sách bảo mật | `default-src 'self'; script-src 'self'` | - XSS protection<br>- Resource control |
+| 🔐 Security | X-XSS-Protection | Chống XSS | `1; mode=block` | - XSS filtering<br>- Attack prevention |
+| 🌍 CORS | Access-Control-Allow-Origin | Domain được phép | `https://example.com`, `*` | - API access control<br>- Resource sharing |
+| 📬 CORS | Access-Control-Allow-Methods | HTTP methods cho phép | `GET, POST, PUT, DELETE` | - API method control<br>- Security |
+| 📋 CORS | Access-Control-Allow-Headers | Headers cho phép | `Authorization, Content-Type` | - Custom headers<br>- Auth tokens |
+| ⏱️ CORS | Access-Control-Max-Age | Cache preflight time | `3600` | - Performance<br>- Reduce requests |
+| 🔄 Content | Transfer-Encoding | Phương thức transfer | `chunked` | - Streaming responses<br>- Large files |
+| 🔑 Security | X-Content-Type-Options | Ngăn MIME sniffing | `nosniff` | - Security hardening<br>- MIME protection |
+| 🌐 Security | Referrer-Policy | Kiểm soát referrer | `strict-origin-when-cross-origin` | - Privacy control<br>- Information leakage |
+| 🚫 Security | X-DNS-Prefetch-Control | Kiểm soát DNS prefetch | `on`, `off` | - Privacy<br>- Performance |
+| 🔒 Security | Expect-CT | Certificate Transparency | `max-age=86400, enforce` | - Certificate validation<br>- Security monitoring |
+| 🛡️ Security | Feature-Policy | Kiểm soát features | `camera 'none'; microphone 'none'` | - Feature control<br>- Security hardening |
+| 🎯 Tracking | Server-Timing | Performance metrics | `db;dur=53, app;dur=47.2` | - Performance monitoring<br>- Debug |
+
+## Các trường hợp sử dụng phổ biến của Response header
+
+1. Quản lý Cache:
+```http
+Cache-Control: max-age=3600, public
+ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+```
+
+2. Bảo mật API:
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy: default-src 'self'
+```
+
+3. CORS cho APIs:
+```http
+Access-Control-Allow-Origin: https://example.com
+Access-Control-Allow-Methods: GET, POST, PUT
+```
+
+4. Xử lý Content:
+```http
+Content-Type: application/json; charset=utf-8
+Content-Encoding: gzip
+```
+
+## Test response header thì test gì?
+
+1. Kiểm tra tính chính xác:
+- Xác nhận các header bắt buộc có mặt đầy đủ
+- Kiểm tra giá trị của header có đúng format
+- Validate các header phụ thuộc lẫn nhau
+
+2. Kiểm tra bảo mật:
+- Xác minh presence của security headers
+- Test CORS configuration
+- Kiểm tra SSL/TLS headers
+
+3. Kiểm tra performance:
+- Test caching headers
+- Verify compression settings
+- Kiểm tra content negotiation
+
+4. Test các trường hợp đặc biệt:
+- Response với status codes khác nhau
+- Headers trong error responses
+- Xử lý charset và encoding
+- Custom headers của ứng dụng
+
+5. Automation test:
+```python
+def test_security_headers(response):
+    assert response.headers['Strict-Transport-Security']
+    assert response.headers['X-Frame-Options'] == 'DENY'
+    assert 'Content-Security-Policy' in response.headers
+```
+
+
+## Phụ lục: chi tiết về các response header phổ biến
 
 1. Content Headers:
 - **Content-Type**: Xác định kiểu dữ liệu và encoding của response
@@ -369,60 +454,3 @@ Response headers đóng vai trò quan trọng trong giao tiếp client-server:
     - Ngăn chặn XSS bằng cách kiểm soát script sources
     - Kiểm soát loading của images, fonts, styles
     - Bảo vệ khỏi clickjacking và injection attacks
-
-## Các trường hợp sử dụng phổ biến của Response header
-
-1. Quản lý Cache:
-```http
-Cache-Control: max-age=3600, public
-ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
-```
-
-2. Bảo mật API:
-```http
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-Content-Security-Policy: default-src 'self'
-```
-
-3. CORS cho APIs:
-```http
-Access-Control-Allow-Origin: https://example.com
-Access-Control-Allow-Methods: GET, POST, PUT
-```
-
-4. Xử lý Content:
-```http
-Content-Type: application/json; charset=utf-8
-Content-Encoding: gzip
-```
-
-## Test response header thì test gì?
-
-1. Kiểm tra tính chính xác:
-- Xác nhận các header bắt buộc có mặt đầy đủ
-- Kiểm tra giá trị của header có đúng format
-- Validate các header phụ thuộc lẫn nhau
-
-2. Kiểm tra bảo mật:
-- Xác minh presence của security headers
-- Test CORS configuration
-- Kiểm tra SSL/TLS headers
-
-3. Kiểm tra performance:
-- Test caching headers
-- Verify compression settings
-- Kiểm tra content negotiation
-
-4. Test các trường hợp đặc biệt:
-- Response với status codes khác nhau
-- Headers trong error responses
-- Xử lý charset và encoding
-- Custom headers của ứng dụng
-
-5. Automation test:
-```python
-def test_security_headers(response):
-    assert response.headers['Strict-Transport-Security']
-    assert response.headers['X-Frame-Options'] == 'DENY'
-    assert 'Content-Security-Policy' in response.headers
-```
