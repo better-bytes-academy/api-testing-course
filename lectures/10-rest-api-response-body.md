@@ -1,5 +1,3 @@
-Tôi sẽ giúp bạn hoàn thiện bài viết về API Response Body một cách chi tiết và có hệ thống.
-
 # Hiểu Kỹ Về API Response - Body
 
 ## Response Body là gì?
@@ -145,5 +143,3 @@ Product ID: 1
 Name: Product
 Price: 99.99
 ```
-
-Bạn có muốn tôi bổ sung thêm phần nào hoặc giải thích chi tiết hơn về mục nào không?
